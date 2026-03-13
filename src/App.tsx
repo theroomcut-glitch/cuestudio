@@ -102,15 +102,13 @@ function MagneticLetter({ children, strength = 50, mouseX, mouseY }: MagneticLet
 const MemoizedMagneticLetter = React.memo(MagneticLetter);
 
 function CustomCursor({ mouseX, mouseY, type }: { mouseX: any, mouseY: any, type: string }) {
-  const cursorX = useSpring(mouseX, { damping: 25, stiffness: 300 });
-  const cursorY = useSpring(mouseY, { damping: 25, stiffness: 300 });
-
+  // Use motion values directly for instant response
   return (
     <motion.div
       className="fixed top-0 left-0 pointer-events-none z-[9999] mix-blend-difference"
       style={{
-        x: cursorX,
-        y: cursorY,
+        x: mouseX,
+        y: mouseY,
         translateX: "-50%",
         translateY: "-50%",
       }}

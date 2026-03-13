@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { useSpring, useMotionValue } from 'motion/react';
+import { useSpring } from 'motion/react';
 
 interface Point {
   x: number;
@@ -11,8 +11,8 @@ export const MouseTrail: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const points = useRef<Point[]>([]);
   
-  const springX = useSpring(0, { damping: 20, stiffness: 250 });
-  const springY = useSpring(0, { damping: 20, stiffness: 250 });
+  const springX = useSpring(0, { damping: 25, stiffness: 450 });
+  const springY = useSpring(0, { damping: 25, stiffness: 450 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,7 +52,7 @@ export const MouseTrail: React.FC = () => {
       // Update points
       points.current.forEach(p => p.age++);
       
-      // Remove old points (reduced maxAge for better performance)
+      // Remove old points
       const maxAge = 30;
       points.current = points.current.filter(p => p.age < maxAge);
 
