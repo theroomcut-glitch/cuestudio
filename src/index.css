@@ -13,6 +13,10 @@
 }
 
 @layer base {
+  html, body, * {
+    cursor: none !important;
+  }
+
   body {
     @apply bg-black text-white antialiased;
     background-image: 

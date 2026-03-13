@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useSpring, useMotionValue } from 'motion/react';
 
 interface Point {
   x: number;
@@ -9,7 +10,9 @@ interface Point {
 export const MouseTrail: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const points = useRef<Point[]>([]);
-  const mousePos = useRef({ x: 0, y: 0 });
+  
+  const springX = useSpring(0, { damping: 20, stiffness: 250 });
+  const springY = useSpring(0, { damping: 20, stiffness: 250 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -24,22 +27,12 @@ export const MouseTrail: React.FC = () => {
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      mousePos.current = { x: e.clientX, y: e.clientY };
-      points.current.push({ x: e.clientX, y: e.clientY, age: 0 });
-    };
-
-    const handleMouseOut = (e: MouseEvent) => {
-      // If mouse leaves the window or enters an iframe, we clear the points
-      // so the trail doesn't "hang" at the edge.
-      if (!e.relatedTarget || (e.relatedTarget as HTMLElement).nodeName === 'IFRAME') {
-        // We don't clear immediately to let the trail finish its animation
-        // but we can mark it.
-      }
+      springX.set(e.clientX);
+      springY.set(e.clientY);
     };
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseout', handleMouseOut);
     handleResize();
 
     let animationFrameId: number;
@@ -47,11 +40,20 @@ export const MouseTrail: React.FC = () => {
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      const currentX = springX.get();
+      const currentY = springY.get();
+      
+      // Only add point if it moved significantly to save memory/CPU
+      const lastPoint = points.current[points.current.length - 1];
+      if (!lastPoint || Math.abs(lastPoint.x - currentX) > 1 || Math.abs(lastPoint.y - currentY) > 1) {
+        points.current.push({ x: currentX, y: currentY, age: 0 });
+      }
+
       // Update points
       points.current.forEach(p => p.age++);
       
-      // Remove old points
-      const maxAge = 40;
+      // Remove old points (reduced maxAge for better performance)
+      const maxAge = 30;
       points.current = points.current.filter(p => p.age < maxAge);
 
       if (points.current.length > 1) {
@@ -74,18 +76,6 @@ export const MouseTrail: React.FC = () => {
         }
       }
 
-      // Draw cursor dot with a slight fade if it's "stale"
-      // If the last point is getting old, it means the mouse stopped moving or left the area
-      const lastPoint = points.current[points.current.length - 1];
-      const dotOpacity = lastPoint ? Math.max(0, 1 - (lastPoint.age / 20)) : 0;
-
-      if (dotOpacity > 0) {
-        ctx.beginPath();
-        ctx.arc(mousePos.current.x, mousePos.current.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${dotOpacity * 0.8})`;
-        ctx.fill();
-      }
-
       animationFrameId = requestAnimationFrame(render);
     };
 
@@ -94,7 +84,6 @@ export const MouseTrail: React.FC = () => {
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseout', handleMouseOut);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
