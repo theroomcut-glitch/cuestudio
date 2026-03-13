@@ -266,14 +266,14 @@ function BentoGrid() {
         <div className="h-full p-8 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group">
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
           <div className="relative z-10">
-            <p className="text-xl leading-relaxed text-white/80 aberration-text font-medium">
+            <p className="text-xl leading-relaxed text-white/80 font-medium">
               Специализируюсь на создании выразительного моушен-дизайна и 3D-графики. 
               Создаю понятные визуальные концепции, раскадровки и анимацию.
             </p>
           </div>
           <div className="mt-8 flex items-center gap-2">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-xs font-bold uppercase tracking-widest text-emerald-500 aberration-text">Available for work</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Available for work</span>
           </div>
         </div>
       </BentoCard>
@@ -281,8 +281,8 @@ function BentoGrid() {
       {/* Experience Block */}
       <BentoCard>
         <div className="h-full p-8 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center group">
-          <span className="text-6xl font-black text-cyan-400 mb-2 aberration-text">2+</span>
-          <span className="text-xs font-bold uppercase tracking-widest opacity-50 aberration-text">Года опыта</span>
+          <span className="text-6xl font-black text-cyan-400 mb-2">2+</span>
+          <span className="text-xs font-bold uppercase tracking-widest opacity-50">Года опыта</span>
         </div>
       </BentoCard>
 
@@ -306,7 +306,7 @@ function BentoGrid() {
                 scale: 1.1,
                 transition: { type: "spring", stiffness: 300, damping: 15 }
               }}
-              className={`w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center font-black text-2xl border border-white/10 ${tool.color} aberration-text shadow-lg`}
+              className={`w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center font-black text-2xl border border-white/10 ${tool.color} shadow-lg`}
             >
               {tool.logo ? (
                 <img 
