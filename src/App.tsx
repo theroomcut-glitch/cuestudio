@@ -12,20 +12,20 @@ const VIDEOS = [
   { 
     id: "ln6y-gGX7E0",
     title: "Expert Reels #1", 
-    glow: "from-indigo-600/30 via-purple-600/10 to-transparent",
-    bgGradient: "from-purple-900/50 via-cyan-900/30 to-rose-900/50"
+    glow: "from-cyan-500/20 via-blue-500/10 to-transparent",
+    bgGradient: "from-black via-cyan-900/40 to-black"
   },
   { 
     id: "hPC8ym8lN7Q",
     title: "Expert Reels #2", 
-    glow: "from-blue-600/20 via-indigo-900/10 to-transparent",
-    bgGradient: "from-black via-indigo-950 via-blue-900/20 to-black"
+    glow: "from-blue-500/20 via-indigo-500/10 to-transparent",
+    bgGradient: "from-black via-blue-900/40 to-black"
   }, 
   { 
     id: "v8w7OHM2HzM",
     title: "Expert Reels #3", 
-    glow: "from-indigo-500/30 via-purple-500/10 to-transparent",
-    bgGradient: "from-indigo-900/60 via-purple-900/40 to-cyan-900/50"
+    glow: "from-indigo-500/20 via-purple-500/10 to-transparent",
+    bgGradient: "from-black via-indigo-900/40 to-black"
   },
 ];
 
