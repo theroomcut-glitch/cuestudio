@@ -22,6 +22,24 @@
     background: radial-gradient(circle at 50% 50%, #001233 0%, #000 100%);
     background-attachment: fixed;
   }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #000;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #06b6d4, #6366f1);
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #06b6d4;
+  }
 }
 
 .brand-shadow {
@@ -47,4 +65,35 @@
 
 .aberration-text {
   text-shadow: 1.5px 0 0 rgba(255,0,0,0.5), -1.5px 0 0 rgba(0,255,255,0.5);
+}
+
+/* Noise Animation */
+.noise-overlay {
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  width: 200%;
+  height: 200%;
+  background: transparent url('https://grainy-gradients.vercel.app/noise.svg') repeat 0 0;
+  animation: noise 0.2s infinite;
+  opacity: .05;
+  visibility: visible;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+@keyframes noise {
+  0% { transform: translate(0,0) }
+  10% { transform: translate(-5%,-5%) }
+  20% { transform: translate(-10%,5%) }
+  30% { transform: translate(5%,-10%) }
+  40% { transform: translate(-5%,15%) }
+  50% { transform: translate(-10%,5%) }
+  60% { transform: translate(15%,0) }
+  70% { transform: translate(0,10%) }
+  80% { transform: translate(-15%,0) }
+  90% { transform: translate(10%,5%) }
+  100% { transform: translate(5%,0) }
 }

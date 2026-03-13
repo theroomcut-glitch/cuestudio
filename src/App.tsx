@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useScroll } from "motion/react";
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useScroll, useAnimationFrame } from "motion/react";
 import { Send, ExternalLink, Play, Pause, Volume2, VolumeX, Volume1, MousePointer2, Cpu, Zap, Layers, Monitor } from "lucide-react";
 import { MouseTrail } from "./components/MouseTrail";
 
@@ -37,48 +37,57 @@ interface MagneticLetterProps {
   key?: React.Key;
 }
 
-function MagneticLetter({ children, strength = 50, mouseX, mouseY }: MagneticLetterProps & { mouseX: any, mouseY: any }) {
+function MagneticLetter({ children, strength = 50, mouseX, mouseY, isTouch }: MagneticLetterProps & { mouseX: any, mouseY: any, isTouch?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useMotionValue(0);
 
-  const springConfig = { damping: 15, stiffness: 150, mass: 0.1 };
+  // Snappier springs for a more "elastic" return
+  const springConfig = isTouch 
+    ? { damping: 12, stiffness: 200, mass: 0.5 } // More "boing" on mobile
+    : { damping: 20, stiffness: 200, mass: 0.1 };
+    
   const springX = useSpring(x, springConfig);
   const springY = useSpring(y, springConfig);
   const springRotate = useSpring(rotate, springConfig);
 
-  useEffect(() => {
-    const update = () => {
-      if (!ref.current) return;
-      const rect = ref.current.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
+  useAnimationFrame(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
 
-      const distanceX = mouseX.get() - centerX;
-      const distanceY = mouseY.get() - centerY;
-      const distance = Math.sqrt(distanceX ** 2 + distanceY ** 2);
+    const mX = mouseX.get();
+    const mY = mouseY.get();
 
-      const radius = 100;
-      if (distance < radius) {
-        const power = (radius - distance) / radius;
-        x.set(-distanceX * power * (strength / 30));
-        y.set(-distanceY * power * (strength / 30));
-        rotate.set(-distanceX * power * 0.2);
-      } else {
-        x.set(0);
-        y.set(0);
-        rotate.set(0);
-      }
-    };
+    const distanceX = mX - centerX;
+    const distanceY = mY - centerY;
+    const distance = Math.sqrt(distanceX ** 2 + distanceY ** 2);
 
-    const unsubscribeX = mouseX.on("change", update);
-    const unsubscribeY = mouseY.on("change", update);
-    return () => {
-      unsubscribeX();
-      unsubscribeY();
-    };
-  }, [mouseX, mouseY, strength]);
+    const radius = isTouch ? 60 : 100; // Smaller radius for both
+    if (distance < radius && mX !== -9999) {
+      const power = (radius - distance) / radius;
+      // Much weaker effect overall
+      const multiplier = isTouch ? 0.3 : 0.5;
+      
+      let targetX = -distanceX * power * (strength / 20) * multiplier;
+      let targetY = -distanceY * power * (strength / 20) * multiplier;
+      
+      // Clamp the movement so they don't fly away
+      const maxMove = isTouch ? 20 : 40;
+      targetX = Math.max(-maxMove, Math.min(maxMove, targetX));
+      targetY = Math.max(-maxMove, Math.min(maxMove, targetY));
+      
+      x.set(targetX);
+      y.set(targetY);
+      rotate.set(-distanceX * power * 0.2 * multiplier);
+    } else {
+      x.set(0);
+      y.set(0);
+      rotate.set(0);
+    }
+  });
 
   return (
     <span className="relative inline-block" style={{ willChange: "transform" }}>
@@ -102,7 +111,6 @@ function MagneticLetter({ children, strength = 50, mouseX, mouseY }: MagneticLet
 const MemoizedMagneticLetter = React.memo(MagneticLetter);
 
 function CustomCursor({ mouseX, mouseY, type }: { mouseX: any, mouseY: any, type: string }) {
-  // Use motion values directly for instant response
   return (
     <motion.div
       className="fixed top-0 left-0 pointer-events-none z-[9999] mix-blend-difference"
@@ -259,70 +267,108 @@ function BentoCard({ children, className }: { children: React.ReactNode, classNa
 }
 
 function BentoGrid() {
+  const containerVariants = {
+    hidden: { 
+      opacity: 0,
+      transition: {
+        staggerChildren: 0.05,
+        staggerDirection: -1
+      }
+    },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+        delayChildren: 0.1
+      }
+    }
+  } as const;
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.8, ease: "easeOut" }
+    }
+  } as const;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-5xl mx-auto mb-32 px-6">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: false, amount: 0.1 }}
+      className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-5xl mx-auto mb-32 px-6"
+    >
       {/* Bio Block */}
       <BentoCard className="md:col-span-2">
-        <div className="h-full p-8 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group">
-          <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-          <div className="relative z-10">
-            <p className="text-xl leading-relaxed text-white/80 font-medium">
-              Специализируюсь на создании выразительного моушен-дизайна и 3D-графики. 
-              Создаю понятные визуальные концепции, раскадровки и анимацию.
-            </p>
+        <motion.div variants={itemVariants} className="h-full">
+          <div className="h-full p-8 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex flex-col justify-between relative overflow-hidden group">
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+            <div className="relative z-10">
+              <p className="text-xl leading-relaxed text-white/80 font-medium">
+                Специализируюсь на создании выразительного моушен-дизайна и 3D-графики. 
+                Создаю понятные визуальные концепции, раскадровки и анимацию.
+              </p>
+            </div>
+            <div className="mt-8 flex items-center gap-2">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Available for work</span>
+            </div>
           </div>
-          <div className="mt-8 flex items-center gap-2">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">Available for work</span>
-          </div>
-        </div>
+        </motion.div>
       </BentoCard>
 
       {/* Experience Block */}
       <BentoCard>
-        <div className="h-full p-8 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center group">
-          <span className="text-6xl font-black text-cyan-400 mb-2">2+</span>
-          <span className="text-xs font-bold uppercase tracking-widest opacity-50">Года опыта</span>
-        </div>
+        <motion.div variants={itemVariants} className="h-full">
+          <div className="h-full p-8 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center group">
+            <span className="text-6xl font-black text-cyan-400 mb-2">2+</span>
+            <span className="text-xs font-bold uppercase tracking-widest opacity-50">Года опыта</span>
+          </div>
+        </motion.div>
       </BentoCard>
 
       {/* Software Block */}
       <BentoCard>
-        <div className="h-full p-8 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex flex-wrap gap-4 items-center justify-center group">
-          {[
-            { name: 'AE', color: 'text-purple-400', rot: -14 },
-            { 
-              name: 'BL', 
-              color: 'text-orange-400',
-              logo: 'https://upload.wikimedia.org/wikipedia/commons/0/0c/Blender_logo_no_text.svg',
-              rot: 18 // Opposite tilt for Blender
-            },
-            { name: 'PR', color: 'text-blue-400', rot: -10 }
-          ].map((tool) => (
-            <motion.div
-              key={tool.name}
-              whileHover={{ 
-                rotate: tool.rot, 
-                scale: 1.1,
-                transition: { type: "spring", stiffness: 300, damping: 15 }
-              }}
-              className={`w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center font-black text-2xl border border-white/10 ${tool.color} shadow-lg`}
-            >
-              {tool.logo ? (
-                <img 
-                  src={tool.logo} 
-                  alt={tool.name} 
-                  className="w-12 h-12 object-contain" 
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                tool.name
-              )}
-            </motion.div>
-          ))}
-        </div>
+        <motion.div variants={itemVariants} className="h-full">
+          <div className="h-full p-8 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] flex flex-wrap gap-4 items-center justify-center group">
+            {[
+              { name: 'AE', color: 'text-purple-400', rot: -14 },
+              { 
+                name: 'BL', 
+                color: 'text-orange-400',
+                logo: 'https://upload.wikimedia.org/wikipedia/commons/0/0c/Blender_logo_no_text.svg',
+                rot: 18 
+              },
+              { name: 'PR', color: 'text-blue-400', rot: -10 }
+            ].map((tool) => (
+              <motion.div
+                key={tool.name}
+                whileHover={{ 
+                  rotate: tool.rot, 
+                  scale: 1.1,
+                  transition: { type: "spring", stiffness: 300, damping: 15 }
+                }}
+                className={`w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center font-black text-2xl border border-white/10 ${tool.color} shadow-lg`}
+              >
+                {tool.logo ? (
+                  <img 
+                    src={tool.logo} 
+                    alt={tool.name} 
+                    className="w-12 h-12 object-contain" 
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  tool.name
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </BentoCard>
-    </div>
+    </motion.div>
   );
 }
 
@@ -409,8 +455,18 @@ function VideoCard({ video, index, activeId, setActiveId, setCursorType }: any) 
     y.set(0);
   };
 
+  const itemVariants = {
+    hidden: { opacity: 0, y: 40 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.8, ease: "easeOut" }
+    }
+  } as const;
+
   return (
-    <div 
+    <motion.div 
+      variants={itemVariants}
       className="relative group" 
       ref={cardRef} 
       onMouseMove={handleMouseMove} 
@@ -427,9 +483,6 @@ function VideoCard({ video, index, activeId, setActiveId, setCursorType }: any) 
       <div className={`absolute -inset-6 bg-gradient-to-tr ${video.glow} rounded-[40px] blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
       
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
         style={{ rotateX: springX, rotateY: springY, perspective: 1000 }}
         className={`relative z-10 bg-white/5 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-2xl shadow-xl ring-1 ring-white/5 ${activeId !== video.id ? 'hover:border-white/20' : ''}`}
       >
@@ -480,7 +533,7 @@ function VideoCard({ video, index, activeId, setActiveId, setCursorType }: any) 
           <ExternalLink size={18} className="opacity-30 group-hover:opacity-100 transition-opacity" />
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -613,31 +666,59 @@ export default function App() {
   
   const contactLinkRef = useRef<HTMLDivElement>(null);
 
+  const [isTouch, setIsTouch] = useState(false);
+
   useEffect(() => {
+    setIsTouch('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    
     const handleMouseMove = (e: MouseEvent) => {
       if (!hasMoved) setHasMoved(true);
       mouseX.set(e.clientX);
       mouseY.set(e.clientY);
     };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!hasMoved) setHasMoved(true);
+      if (e.touches[0]) {
+        mouseX.set(e.touches[0].clientX);
+        mouseY.set(e.touches[0].clientY);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      // Move "mouse" far away so letters return to center
+      mouseX.set(-9999);
+      mouseY.set(-9999);
+    };
+
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchstart", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchstart", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
   }, [hasMoved]);
 
   return (
     <div className="min-h-screen font-sans selection:bg-cyan-500/30 cursor-none">
+      <div className="noise-overlay" />
       <ScrollRuler setCursorType={setCursorType} />
       
-      {hasMoved && <CustomCursor mouseX={mouseX} mouseY={mouseY} type={cursorType} />}
-      <MouseTrail />
+      {hasMoved && !isTouch && <CustomCursor mouseX={mouseX} mouseY={mouseY} type={cursorType} />}
 
-      {/* Floating Contact Card */}
+      {/* Floating Contact Card - Moved to Bottom Right */}
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed top-8 right-8 z-50 hidden md:block"
+        className="fixed bottom-8 right-8 z-50 hidden md:block"
       >
         <Magnetic strength={0.3} triggerRef={contactLinkRef} mouseX={mouseX} mouseY={mouseY}>
-          <div className="w-64 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="w-64 bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/5">
             <div className="px-4 py-3 bg-white/5 border-b border-white/5 text-center">
               <span className="text-xs font-bold uppercase tracking-widest opacity-50">Связь со мной</span>
             </div>
@@ -661,20 +742,20 @@ export default function App() {
       </motion.div>
 
       {/* Header */}
-      <header className="pt-32 pb-16 px-6 text-center border-b border-white/5 overflow-hidden">
+      <header className="pt-32 pb-16 px-6 text-center border-b border-white/5 overflow-hidden touch-none select-none">
         <motion.h1 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-6xl md:text-8xl font-black uppercase tracking-tighter brand-shadow mb-4 select-none flex justify-center gap-[0.1em]"
+          className="text-5xl md:text-8xl font-black uppercase tracking-tighter brand-shadow mb-4 select-none flex justify-center gap-[0.1em]"
         >
           {"cue".split("").map((char, i) => (
-            <MemoizedMagneticLetter key={i} strength={40} mouseX={mouseX} mouseY={mouseY}>{char}</MemoizedMagneticLetter>
+            <MemoizedMagneticLetter key={i} strength={40} mouseX={mouseX} mouseY={mouseY} isTouch={isTouch}>{char}</MemoizedMagneticLetter>
           ))}
           <span className="mx-2 md:mx-4" />
           <span className="italic lowercase flex">
             {"studio".split("").map((char, i) => (
-              <MemoizedMagneticLetter key={i} strength={30} mouseX={mouseX} mouseY={mouseY}>{char}</MemoizedMagneticLetter>
+              <MemoizedMagneticLetter key={i} strength={30} mouseX={mouseX} mouseY={mouseY} isTouch={isTouch}>{char}</MemoizedMagneticLetter>
             ))}
           </span>
         </motion.h1>
@@ -683,10 +764,10 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="text-xl md:text-2xl text-white/60 font-medium tracking-wide select-none flex justify-center gap-[0.2em]"
+          className="text-lg md:text-2xl text-white/60 font-medium tracking-wide select-none flex justify-center gap-[0.2em]"
         >
           {"Motion Designer".split("").map((char, i) => (
-            <MemoizedMagneticLetter key={i} strength={40} mouseX={mouseX} mouseY={mouseY}>{char === " " ? "\u00A0" : char}</MemoizedMagneticLetter>
+            <MemoizedMagneticLetter key={i} strength={40} mouseX={mouseX} mouseY={mouseY} isTouch={isTouch}>{char === " " ? "\u00A0" : char}</MemoizedMagneticLetter>
           ))}
         </motion.p>
       </header>
@@ -696,7 +777,28 @@ export default function App() {
       <main className="max-w-6xl mx-auto px-6 py-24">
         <BentoGrid />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <motion.div 
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: false, amount: 0.05 }}
+          variants={{
+            hidden: { 
+              opacity: 0,
+              transition: {
+                staggerChildren: 0.05,
+                staggerDirection: -1
+              }
+            },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.1
+              }
+            }
+          }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-12"
+        >
           {VIDEOS.map((video, index) => (
             <VideoCard 
               key={video.id}
@@ -707,16 +809,31 @@ export default function App() {
               setCursorType={setCursorType}
             />
           ))}
-        </div>
+        </motion.div>
       </main>
 
-      <footer className="py-24 px-6 bg-black/50 border-t border-white/5 text-center">
-        <h2 className="text-3xl font-bold mb-8 flex justify-center gap-[0.1em] select-none">
-          {"Открыт для новых проектов".split("").map((char, i) => (
-            <MemoizedMagneticLetter key={i} strength={30} mouseX={mouseX} mouseY={mouseY}>
-              {char === " " ? "\u00A0" : char}
-            </MemoizedMagneticLetter>
-          ))}
+      <motion.footer 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: false }}
+        transition={{ duration: 1 }}
+        className="py-24 px-6 bg-black/50 border-t border-white/5 text-center"
+      >
+        <h2 className="text-xl md:text-3xl font-bold mb-8 flex flex-wrap justify-center gap-y-2 select-none">
+          <span className="flex mr-[0.3em]">
+            {"Открыт для".split("").map((char, i) => (
+              <MemoizedMagneticLetter key={`1-${i}`} strength={30} mouseX={mouseX} mouseY={mouseY} isTouch={isTouch}>
+                {char === " " ? "\u00A0" : char}
+              </MemoizedMagneticLetter>
+            ))}
+          </span>
+          <span className="flex">
+            {"новых проектов".split("").map((char, i) => (
+              <MemoizedMagneticLetter key={`2-${i}`} strength={30} mouseX={mouseX} mouseY={mouseY} isTouch={isTouch}>
+                {char === " " ? "\u00A0" : char}
+              </MemoizedMagneticLetter>
+            ))}
+          </span>
         </h2>
         <div className="flex justify-center gap-8">
           <a 
@@ -729,7 +846,7 @@ export default function App() {
             @cuecute
           </a>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 }
